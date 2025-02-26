@@ -1,0 +1,59 @@
+services:
+  kaspa_explorer_testnet:
+    container_name: kaspa_explorer_testnet
+    image: supertypo/kaspa-explorer:latest
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+    environment:
+      API_URI: http://localhost:8002
+      API_WS_URI: ws://localhost:8003
+
+  kaspa_rest_server_testnet:
+    container_name: kaspa_rest_server_testnet
+    image: kaspanet/kaspa-rest-server:latest
+    restart: unless-stopped
+    environment:
+      KASPAD_HOST_1: kaspad_testnet:16110
+      SQL_URI: postgresql+asyncpg://postgres:postgres@kaspa_db_testnet:5432/postgres
+    ports:
+      - "127.0.0.1:8002:8000"
+
+  simply_kaspa_socket_server_testnet:
+    container_name: simply_kaspa_socket_server_testnet
+    image: supertypo/simply-kaspa-socket-server:unstable
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8003:8000"
+    command: -x 20 -s ws://kaspad_testnet:17110 -n testnet-10
+
+  simply_kaspa_indexer_testnet:
+    container_name: simply_kaspa_indexer_testnet
+    image: supertypo/simply-kaspa-indexer:latest
+    restart: unless-stopped
+    command: -u -s ws://kaspad_testnet:17110 -d postgresql://postgres:postgres@kaspa_db_testnet:5432/postgres -n testnet-10
+
+  kaspad_testnet:
+    container_name: kaspad_testnet
+    image: supertypo/rusty-kaspad:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:16111:16110"
+      - "127.0.0.1:17111:17110"
+    volumes:
+      - ./data/kaspad_testnet:/app/data/
+    command: kaspad --testnet --yes --nologfiles --disable-upnp --utxoindex --rpclisten=0.0.0.0:16110 --rpclisten-borsh=0.0.0.0:17110
+
+  kaspa_db_testnet:
+    container_name: kaspa_db_testnet
+    image: postgres:16-alpine
+    restart: unless-stopped
+    shm_size: 4G
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - ./data/kaspa_db_testnet:/var/lib/postgresql/data/
